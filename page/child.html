@@ -1,0 +1,17 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>body{margin:0;background:#fff;color:#111;font:16px system-ui}#screen{position:relative;height:320px;touch-action:none;-webkit-user-select:none;user-select:none}
+.b{position:absolute;left:12px;right:12px;height:46px;border:1px solid #999;border-radius:6px;display:flex;align-items:center;padding:0 10px;box-sizing:border-box}
+#em{top:20px}#pw{top:96px}#lnk{top:172px;border-style:dashed;color:#06c}</style></head>
+<body><div id="screen"><div class="b" id="em" data-k="email">Email (a field on the page)</div><div class="b" id="pw" data-k="password">Password (a field on the page)</div>
+<div class="b" id="lnk" data-k="">A link (not a field)</div></div>
+<script>
+// mode=sync: the tap's own touchend gives the field (Foundry's new way, from the page's list of fields), and the page's answer
+// comes 500 ms later and confirms it. mode=async: only the answer, 500 ms later (Foundry's old way).
+var mode = new URLSearchParams(location.search).get('mode') || 'sync', s = document.getElementById('screen');
+s.addEventListener('touchstart', function (e) { e.preventDefault(); }, { passive: false });
+s.addEventListener('touchend', function (e) {
+  var t = e.changedTouches[0], el = document.elementFromPoint(t.clientX, t.clientY), k = el && el.dataset ? el.dataset.k : '';
+  if (mode === 'sync' && k) parent.openTyping(k, 'touchend');
+  setTimeout(function () { if (k) parent.openTyping(k, 'answer'); else parent.closeTyping('answer'); }, 500);
+});
+</script></body></html>

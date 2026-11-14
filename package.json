@@ -1,0 +1,1 @@
+{ "name": "ios-keyboard-lab", "private": true, "type": "module", "dependencies": { "webdriverio": "^9.20.0" } }

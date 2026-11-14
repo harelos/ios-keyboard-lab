@@ -1,0 +1,55 @@
+name: keyboard
+on:
+  workflow_dispatch:
+    inputs:
+      matrix:
+        description: JSON list of {runner,xcode,runtime,devices}
+        required: true
+        default: '[{"runner":"macos-26","xcode":"26.6","runtime":"iOS 26.5","devices":"iPhone 17"}]'
+jobs:
+  kb:
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(inputs.matrix) }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Xcode
+        run: |
+          sudo xcode-select -s "/Applications/Xcode_${{ matrix.xcode }}.app"
+          xcodebuild -version
+          xcrun simctl list runtimes
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Appium
+        run: |
+          npm i -g appium@latest
+          appium driver install xcuitest
+          npm i --no-audit --no-fund
+      - name: Prebuilt WebDriverAgent
+        run: |
+          mkdir -p wda-prebuilt
+          appium driver run xcuitest download-wda -- --outdir="$PWD/wda-prebuilt" --kind=sim --platform=ios || true
+          cd wda-prebuilt && for z in *.zip; do [ -f "$z" ] && unzip -q -o "$z"; done; cd ..
+          APP=$(find "$PWD/wda-prebuilt" -maxdepth 4 -name 'WebDriverAgentRunner-Runner.app' | head -1)
+          echo "WDA_APP=$APP" >> "$GITHUB_ENV"; echo "prebuilt: $APP"
+      - name: Start Appium
+        run: |
+          nohup appium --address 127.0.0.1 --port 4723 --log-timestamp --log appium.log --log-level info > /dev/null 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:4723/status >/dev/null && break; sleep 2; done
+      - name: Run
+        timeout-minutes: 40
+        env:
+          WDA_DIR: ${{ github.workspace }}/wda-derived
+        run: node run.mjs --runtime "${{ matrix.runtime }}" --device "${{ matrix.devices }}" --out out
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kb-${{ strategy.job-index }}
+          path: |
+            out
+            appium.log
+          retention-days: 7

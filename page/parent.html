@@ -1,0 +1,32 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>keyboard check</title>
+<style>body{margin:0;font:15px -apple-system,system-ui;background:#0b0910;color:#eee}
+#bar{height:44px;display:flex;align-items:center;gap:6px;padding:0 6px;background:#16131d}
+#row{display:flex;flex:1;gap:6px}#row[hidden]{display:none}
+#row input{flex:1;min-width:0;height:32px;font:500 16px system-ui;border:1px solid #d4a84b;border-radius:8px;background:#191621;color:#eee;padding:0 8px}
+#lbl{flex:1;opacity:.6}iframe{display:block;width:100%;height:320px;border:0}#log{font:12px ui-monospace;padding:6px;white-space:pre-wrap}</style></head>
+<body><div id="bar"><span id="lbl">bar</span><div id="row" hidden>
+<input id="ftx" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="phone field">
+<input id="fpw" type="password" autocomplete="current-password" aria-label="phone password field" hidden></div></div>
+<iframe id="f"></iframe><div id="log"></div>
+<script>
+// The same moves as Foundry's phone split (public/side-browser.js): the field lives in this page, the finger lands in the frame.
+var q = new URLSearchParams(location.search), mode = q.get('mode') || 'sync', one = q.get('one') === '1';
+var row = document.getElementById('row'), ftx = document.getElementById('ftx'), fpw = document.getElementById('fpw'), lbl = document.getElementById('lbl');
+window.events = [];
+function note(t) { events.push(t); document.getElementById('log').textContent = events.join('\n'); }
+window.openTyping = function (kind, why) {
+  var next = one ? ftx : (kind === 'password' ? fpw : ftx), other = next === ftx ? fpw : ftx;
+  if (one) { if (ftx.type !== (kind === 'password' ? 'password' : 'text')) ftx.type = kind === 'password' ? 'password' : 'text'; }
+  else if (next === ftx) ftx.setAttribute('inputmode', kind === 'email' ? 'email' : 'text');
+  row.hidden = false; lbl.hidden = true; next.hidden = false;
+  if (document.activeElement !== next) next.focus({ preventScroll: true });
+  if (!one && !other.hidden) other.hidden = true;
+  note('open ' + kind + ' (' + why + ') active=' + (document.activeElement && document.activeElement.id));
+};
+window.closeTyping = function (why) {
+  if (document.activeElement === ftx || document.activeElement === fpw) document.activeElement.blur();
+  row.hidden = true; lbl.hidden = false; note('close (' + why + ')');
+};
+document.getElementById('f').src = 'child.html?mode=' + mode;
+</script></body></html>
