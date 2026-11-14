@@ -41,7 +41,7 @@ try {
     secure: (await driver.$$('//XCUIElementTypeSecureTextField')).length,
   }));
   const tapAt = (x, y) => native(() => driver.execute('mobile: tap', { x, y }));
-  for (const c of [{ mode: 'async' }, { mode: 'sync' }, { mode: 'sync', one: '1' }]) {
+  for (const c of [{ mode: 'async' }, { mode: 'sync' }, { mode: 'mixed' }, { mode: 'sync', one: '1' }]) {
     const tag = c.mode + (c.one ? '-one' : ''), C = { case: tag, steps: [] };
     R.cases.push(C);
     await driver.url('http://127.0.0.1:8000/parent.html?mode=' + c.mode + (c.one ? '&one=1' : ''));
