@@ -11,6 +11,8 @@ var mode = new URLSearchParams(location.search).get('mode') || 'sync', s = docum
 s.addEventListener('touchstart', function (e) { e.preventDefault(); }, { passive: false });
 s.addEventListener('touchend', function (e) {
   var t = e.changedTouches[0], el = document.elementFromPoint(t.clientX, t.clientY), k = el && el.dataset ? el.dataset.k : '';
+  window.lastTouch = { x: t.clientX, y: t.clientY, id: el && el.id };
+  if (window.calibrating) return;
   if ((mode === 'sync' && k) || (mode === 'mixed' && k === 'email')) parent.openTyping(k, 'touchend');   // mixed: the password only 0.5 s later, while the keyboard is up
   setTimeout(function () { if (k) parent.openTyping(k, 'answer'); else parent.closeTyping('answer'); }, 500);
 });

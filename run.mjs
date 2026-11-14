@@ -59,11 +59,19 @@ try {
     const pos = await driver.execute('var f=document.getElementById("f"),d=f.contentDocument,fr=f.getBoundingClientRect();function c(id){var r=d.getElementById(id).getBoundingClientRect();return {x:fr.left+r.left+r.width/2,y:fr.top+r.top+r.height/2}}return {em:c("em"),pw:c("pw"),lnk:c("lnk"),ih:innerHeight,vv:visualViewport.height}');
     const wv = await native(async () => { const e = await driver.$('//XCUIElementTypeWebView'); return Object.assign({}, await e.getLocation(), await e.getSize()); });
     C.pos = pos; C.webview = wv;
+    // calibrate: one tap on the empty bottom of the frame's screen (ignored by the page), then read where it landed
+    await driver.execute('document.getElementById("f").contentWindow.calibrating = true');
+    const aim = { x: pos.lnk.x, y: pos.lnk.y + 80 };
+    await tapAt(Math.round(wv.x + aim.x), Math.round(wv.y + aim.y)); await sleep(700);
+    const got = await driver.execute('var f=document.getElementById("f"),t=f.contentWindow.lastTouch,r=f.getBoundingClientRect();return t?{x:r.left+t.x,y:r.top+t.y}:null');
+    const dx = got ? aim.x - got.x : 0, dy = got ? aim.y - got.y : 0; C.calibration = { aim, got, dx, dy };
+    await driver.execute('document.getElementById("f").contentWindow.calibrating = false');
+    console.log(tag, 'calibration', JSON.stringify(C.calibration));
     const step = async (name, id, wait) => {
-      await tapAt(Math.round(wv.x + pos[id].x), Math.round(wv.y + pos[id].y));
+      await tapAt(Math.round(wv.x + pos[id].x + dx), Math.round(wv.y + pos[id].y + dy));
       await sleep(wait);
       const k = await kb();
-      const w = await driver.execute('var a=document.activeElement;return {active:a&&a.id,type:document.getElementById("ftx").type,ftx:document.getElementById("ftx").value,fpw:document.getElementById("fpw").value,vv:Math.round(visualViewport.height),events:events.slice()}');
+      const w = await driver.execute('var a=document.activeElement,lt=document.getElementById("f").contentWindow.lastTouch;return {hit:lt&&lt.id,active:a&&a.id,type:document.getElementById("ftx").type,ftx:document.getElementById("ftx").value,fpw:document.getElementById("fpw").value,vv:Math.round(visualViewport.height),events:events.slice()}');
       await driver.saveScreenshot(path.join(OUT, `${tag}-${name}.png`)).catch(() => {});
       const s = Object.assign({ step: name }, k, w);
       C.steps.push(s);
